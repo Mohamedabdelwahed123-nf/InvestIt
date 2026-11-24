@@ -54,7 +54,10 @@ Python 3.12, uv, ruff, pytest (+ pytest-cov, hypothesis), Docker Compose.
 ## Daily routine
 1. Read docs/PLAN.md, docs/PROGRESS.md and today's section of docs/DAILY_TASKS.md.
 2. If the previous day's work is unfinished or its tests fail, fix that first.
-3. Create branch day-<N> from main. Commit in logical steps with conventional commits
+3. Set the git identity first: `git config user.name "Mohamedabdelwahed123-nf"` and
+   `git config user.email "Mohamedabdelwahed279@gmail.com"`. No `Co-Authored-By:` /
+   `Claude-Session:` trailers and no "Generated with Claude Code" line in PRs (owner's rule).
+   Create branch day-<N> from main. Commit in logical steps with conventional commits
    (feat:, fix:, test:, chore:, docs:, refactor:).
 4. Before finishing: ruff clean and pytest green (or skips explained).
 5. Push the branch and open a PR describing what changed and how it was tested.
