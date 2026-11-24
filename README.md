@@ -35,14 +35,13 @@ make test                   # pytest with coverage
 make up                     # Postgres 16 + pgvector and Langfuse via Docker Compose
 ```
 
-Status: backend under construction (see `docs/PLAN.md` and `docs/PROGRESS.md`).
+Status: backend under construction.
 The frontend (Next.js) comes last.
 
 ## Layout
 ```
 backend/   calculator/ (no AI) · agents/ (LangGraph) · safety/ · api/ (FastAPI) · data/ · db/ · tests/
 frontend/  Next.js (later)
-docs/      PLAN.md · DAILY_TASKS.md · PROGRESS.md
 ```
 
 License: see `LICENSE`.
