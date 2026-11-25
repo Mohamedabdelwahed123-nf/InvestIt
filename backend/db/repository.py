@@ -119,7 +119,7 @@ class SqlFundRepository:
         if not navs:
             return 0
         with self._session_factory.begin() as s:
-            ids = dict(s.execute(select(FundRow.code, FundRow.id)).tuples())
+            ids = {code: i for code, i in s.execute(select(FundRow.code, FundRow.id))}
             values = [_nav_values(n, ids) for n in navs]
             for chunk in _chunks(values, 2000):
                 stmt = insert(NavPriceRow).values(chunk)
