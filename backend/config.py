@@ -29,6 +29,12 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL of the Postgres 16 + pgvector database.",
     )
 
+    test_database_url: str | None = Field(
+        default=None,
+        description="Throwaway database for integration tests (wiped by tests). "
+        "DB tests are skipped when unset or unreachable.",
+    )
+
     # The LLM provider is not chosen yet; "fake" keeps tests offline.
     llm_provider: LLMProvider = "fake"
     llm_model: str = Field(default="", description="Strong model (moderator).")
