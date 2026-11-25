@@ -33,3 +33,50 @@
 2. **Langfuse version** — compose uses Langfuse v2 (one container + Postgres) for simplicity.
    Langfuse v3 needs ClickHouse, Redis and S3/MinIO; say if you want v3 or Langfuse Cloud instead.
 3. **Branch protection** — consider requiring the CI check on `main` before merging.
+
+## Day 2 — Database and data layer (2026-11-25) ✅
+**Branch:** `day-2`
+
+### Done
+- `backend/db/models.py`: SQLAlchemy 2.0 models for `funds` (code UNIQUE, category CHECK,
+  currency default `TND`), `nav_prices` (`NUMERIC(18,6)`, UNIQUE(fund_id, date), CHECK nav > 0)
+  and `data_flags` (fund_id, date, issue, created_at). Plain frozen domain types in
+  `backend/db/domain.py` (`Category`, `Fund`, `FundRecord`, `NavRecord`, `NavPoint`).
+- Alembic (`alembic.ini`, `backend/db/migrations/`): migration `0001` enables `vector` (pgvector)
+  and creates the three tables; URL comes from `-x db_url=…` or `DATABASE_URL`, never from the ini.
+  `alembic check` reports no drift between models and migration. `make migrate`.
+- `backend/data/sample/`: SAMPLE synthetic data — 10 invented funds (2 per category, codes `SMP-`,
+  names `SAMPLE …`), daily NAV Mon–Fri 2023-01-02 → 2025-12-31 (7,830 rows, `source = SAMPLE`),
+  deterministic generator `generate.py`, README saying it must be replaced by real CMF data.
+- `backend/data/load_csv.py`: pydantic-validated loader (positive NAV, Decimal from text only,
+  max 6 decimals, ISO dates, known category, known fund code, no duplicate codes/dates, required
+  columns). All bad rows reported as `file line N: reason`; nothing is written if any row fails.
+  Idempotent upserts (`ON CONFLICT DO UPDATE`). CLI prints friendly errors, no tracebacks.
+  `make load-sample`.
+- `backend/db/repository.py`: `FundRepository` (list_funds, get_fund, get_nav_history(fund_id,
+  start, end), get_category_funds) + `FundWriter` (upsert_funds, upsert_nav_prices) protocols;
+  `SqlFundRepository` and `InMemoryFundRepository` (fake). Returns domain types, NAV as Decimal.
+- Tests: unit (validation, sample data, models, CLI errors); integration contract tests that run
+  the same cases against the fake and against Postgres; Postgres-only tests (migration + pgvector,
+  downgrade/upgrade, DB constraints, CLI load).
+- CI now runs a `pgvector/pgvector:pg16` service and sets `TEST_DATABASE_URL`, so DB tests run in CI.
+
+### Test results
+- `uv run ruff check .` → all checks passed; `uv run ruff format --check .` → clean.
+- Without a DB: `uv run pytest` → 39 passed, 10 skipped ("TEST_DATABASE_URL is not set"), coverage 88%.
+- With a local Postgres 16 + pgvector 0.6 (`TEST_DATABASE_URL` set) → 49 passed, coverage 97.8%.
+  Docker containers could not be used here, so a local Postgres 16 cluster (+ apt pgvector) was
+  started instead; `alembic upgrade/downgrade` and `load_csv` were run against it (loading twice
+  keeps 10 funds / 7,830 NAV rows — idempotent).
+
+### What is left
+- Day 3: calculator core part 1 — `money.py` and `stats.py` (TDD, coverage ≥ 90%).
+- `data_flags` table exists but nothing writes to it yet (Day 9 second-source check).
+
+### Decisions for the owner
+1. **Test database** — DB tests only run when `TEST_DATABASE_URL` points to a throwaway DB
+   (tables are wiped). Locally: create e.g. `invesit_test` in the compose Postgres and set it in `.env`.
+2. **Sample parameters** — synthetic yearly drift/volatility per category are invented
+   (bond ≈ 7% / 0.3%, equity ≈ 8–9% / 12–17%). They only shape test data; tell me if you want
+   other ranges. Real CMF data replaces them on Day 9.
+3. Earlier open items still stand: LLM provider, Langfuse v2 vs v3, branch protection on `main`.
