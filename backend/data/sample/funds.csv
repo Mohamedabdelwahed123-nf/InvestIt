@@ -1,0 +1,11 @@
+code,name,manager,category,currency
+SMP-BOND-1,SAMPLE Bond SICAV Alpha,SAMPLE Asset Manager (synthetic),bond_sicav,TND
+SMP-BOND-2,SAMPLE Bond SICAV Beta,SAMPLE Asset Manager (synthetic),bond_sicav,TND
+SMP-NAT-1,SAMPLE National Bond Tranche A,SAMPLE Asset Manager (synthetic),national_bond,TND
+SMP-NAT-2,SAMPLE National Bond Tranche B,SAMPLE Asset Manager (synthetic),national_bond,TND
+SMP-MIX-1,SAMPLE Mixed SICAV Gamma,SAMPLE Asset Manager (synthetic),mixed_sicav,TND
+SMP-MIX-2,SAMPLE Mixed SICAV Delta,SAMPLE Asset Manager (synthetic),mixed_sicav,TND
+SMP-EQ-1,SAMPLE Equity SICAV Epsilon,SAMPLE Asset Manager (synthetic),equity_sicav,TND
+SMP-EQ-2,SAMPLE Equity SICAV Zeta,SAMPLE Asset Manager (synthetic),equity_sicav,TND
+SMP-FCP-1,SAMPLE Equity FCP Eta,SAMPLE Asset Manager (synthetic),equity_fcp,TND
+SMP-FCP-2,SAMPLE Equity FCP Theta,SAMPLE Asset Manager (synthetic),equity_fcp,TND
