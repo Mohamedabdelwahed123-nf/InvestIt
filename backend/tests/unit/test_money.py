@@ -52,7 +52,7 @@ class TestToDecimal:
 
 class TestRoundTnd:
     def test_quantum_is_one_millime(self) -> None:
-        assert TND_QUANTUM == D("0.001")
+        assert D("0.001") == TND_QUANTUM
 
     @pytest.mark.parametrize(
         ("value", "expected"),
