@@ -39,7 +39,7 @@ def pts(*pairs: tuple[str, str]) -> list[PricePoint]:
 
 
 def business_days(start: date, navs: list[str]) -> list[PricePoint]:
-    """One point per Mon–Fri trading day starting at `start`."""
+    """One point per Mon-Fri trading day starting at `start`."""
     out: list[PricePoint] = []
     day = start
     for nav in navs:
