@@ -80,3 +80,48 @@
    (bond ≈ 7% / 0.3%, equity ≈ 8–9% / 12–17%). They only shape test data; tell me if you want
    other ranges. Real CMF data replaces them on Day 9.
 3. Earlier open items still stand: LLM provider, Langfuse v2 vs v3, branch protection on `main`.
+
+## Day 3 — Calculator part 1: money and statistics (2026-11-27) ✅
+**Branch:** `day-3`
+
+### Done
+- Strict TDD: tests committed first (RED: collection failed on missing modules), then the
+  implementation (GREEN). Commits show both steps.
+- `backend/calculator/core/money.py`: `to_decimal` (refuses float, bool, NaN/Inf, bad text),
+  `round_tnd` (half-up, 3 decimals), `round_rate` (6 decimals), `parse_amount` (> 0, ≤ 3 decimals),
+  `percent_of`, `percent_to_fraction`, `fraction_to_percent`, `apply_rate` (refuses < -100%),
+  `safe_divide`, and `allocate(amount, weights)` — largest-remainder split in millimes that always
+  sums exactly to the amount (hypothesis property test). Ready for Day 4 plans.
+- `backend/calculator/core/stats.py`: `validate_series`, `period_returns` (per observation,
+  monthly, yearly), `total_return`, `annualised_return`, `annualised_volatility`, `max_drawdown`,
+  `worst_rolling_return` (12 months by default, month-end clamping), `find_gaps`, `fund_stats`,
+  `category_stats`. Frozen output models `FundStats`, `CategoryStats` (+ `PricePoint`,
+  `PeriodReturn`, `Gap`). Accepts any object with `.date`/`.nav`, so the repository's `NavPoint`
+  works without the core importing the DB. Exact formulas written into `docs/PLAN.md`.
+- Edge cases tested: weekends/holidays, long gaps, duplicate dates, NAV ≤ 0, float NAV, empty /
+  too-short series (`InsufficientDataError` with "needs at least N NAV observations, got M"),
+  series shorter than 12 months (worst 12m = None), Feb 29, mixed categories, empty category.
+- `test_calculator_purity.py`: AST check that `calculator/core` imports nothing from DB, agents,
+  API, SQLAlchemy, LLM SDKs, HTTP or `random`, and never builds a float.
+
+### Test results
+- `uv run ruff check .` → all checks passed; `uv run ruff format --check .` → clean.
+- `uv run pytest` → 134 passed, 10 skipped (Postgres tests: "TEST_DATABASE_URL is not set" —
+  no Docker/Postgres in this build environment; they run in CI). Total coverage 92.9%;
+  `calculator/core/money.py` 100%, `calculator/core/stats.py` 100%.
+- Sanity run on SAMPLE data: bond SICAV ≈ 7.5%/yr with 0.4% volatility; equity SICAV ≈ -0.8%/yr
+  with 13.9% volatility and -24.7% worst drawdown (synthetic numbers, not real funds).
+
+### What is left
+- Day 4: `plans.py` (make_plan) and `simulate.py` (p10/p50/p90 over rolling windows), property
+  tests, 1,000 TND / 12 months scenario.
+
+### Decisions for the owner
+1. **Statistic conventions** — 365.25-day year, sample std, volatility annualised by the observed
+   frequency, gap threshold 7 days, minimum 20 observations per fund, category = equal-weight mean
+   + worst case. Say if you prefer e.g. 252 trading days or a category index series instead.
+2. **Rounding** — TND half-up (not banker's rounding). Confirm this matches how you want amounts shown.
+3. **Sample data** — by chance the SAMPLE equity funds end the 3 years slightly negative, so Day 4
+   growth plans will look poor on sample data. Fine for tests; regenerate with other seeds if you
+   want nicer demos (real CMF data replaces it on Day 9).
+4. Earlier open items still stand: LLM provider, Langfuse v2 vs v3, branch protection on `main`.
