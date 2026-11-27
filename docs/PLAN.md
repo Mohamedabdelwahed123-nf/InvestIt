@@ -75,6 +75,23 @@ docker-compose.yml
 - Allocations always sum exactly to the amount; no negative parts.
 - Simulation: p10 / p50 / p90 over historical rolling windows of the horizon (deterministic).
 
+## Calculator statistics (Day 3, `calculator/core/stats.py`)
+- Money: `Decimal` only (floats refused), TND rounded half-up to 3 decimals; rates are fractions
+  rounded half-up to 6 decimals. `allocate()` splits by weights with largest remainder so the
+  parts always sum exactly to the amount.
+- A NAV series holds trading days only; weekends/holidays are absent and returns are taken
+  between consecutive observations. Duplicate dates or NAV <= 0 are errors.
+- Time is calendar time, 1 year = 365.25 days.
+- Annualised return = (last/first)^(365.25/days) - 1.
+- Annualised volatility = sample std of observation returns x sqrt(returns / (days/365.25)).
+- Max drawdown = worst fall from the running peak (<= 0).
+- Worst 12-month return = min over observations >= 12 months after start of NAV / (last NAV on
+  or before the same day 12 months earlier) - 1; `None` if the series is shorter than 12 months.
+- Gap = more than 7 calendar days between observations (reported, not an error).
+- `fund_stats` needs >= 20 observations (`InsufficientDataError` otherwise).
+- Category stats = equal-weight mean of annualised return and volatility, worst max drawdown and
+  worst 12-month return across the category's funds.
+
 ## Phases
 | Day | Phase | Done when |
 |---|---|---|
