@@ -104,7 +104,7 @@ def test_mixed_plan_uses_each_category_on_the_same_windows() -> None:
 
 
 def test_accepts_repository_navpoints_and_ignores_unused_categories() -> None:
-    points = [NavPoint(p.date, p.nav) for p in growing(60, "0.5")]
+    points = [NavPoint(p.date, p.nav, "SAMPLE") for p in growing(60, "0.5")]
     result = simulate(bond_only_plan(), 1, {"bond_sicav": points, "equity_sicav": flat(3)})
     assert result.window_count > 0
     assert result.amount == D("1000.000")
