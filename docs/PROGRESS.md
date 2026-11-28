@@ -125,3 +125,60 @@
    growth plans will look poor on sample data. Fine for tests; regenerate with other seeds if you
    want nicer demos (real CMF data replaces it on Day 9).
 4. Earlier open items still stand: LLM provider, Langfuse v2 vs v3, branch protection on `main`.
+
+## Day 4 — Calculator part 2: plans and simulation (2026-11-28) ✅
+**Branch:** `day-4`
+
+### Done
+- Strict TDD: tests committed first (RED: collection failed on missing `plans`/`simulate`), then
+  the implementation (GREEN), one commit per module.
+- `backend/calculator/core/plans.py`: `make_plan(amount, months, risk_tolerance,
+  has_emergency_fund, profile, *, national_bond_open=False)` → frozen `Plan` with `Allocation`
+  lines (category, purpose `emergency`/`investment`, exact percent, TND amount), equity exposure
+  and plain-text `notes` saying which rules fired. Rules: 30% emergency reserve in bond SICAV when
+  there is no emergency fund; horizon bands (< 12 months bond only; 12–35 / 36–59 / ≥ 60 months
+  tables); exposure (equity + ½ mixed) capped by risk tolerance (15 / 35 / 65, cautious gets half);
+  national bond only for ≥ 60 months and an open tranche; individual stocks never allocated.
+  Exact rules and tables written into `docs/PLAN.md` ("Calculator plans").
+- `backend/calculator/core/simulate.py`: `simulate(plan, months, history)` → frozen `Simulation`
+  with bad/average/good = p10/p50/p90 over every historical rolling window of `months` (same
+  windows for all categories, linear-interpolation percentiles, no randomness);
+  `equal_weight_index` builds one base-100 series per category from its funds; `percentile`.
+  Clear `InsufficientHistoryError` when the history is too short. Method in `docs/PLAN.md`.
+- Hypothesis properties: parts sum exactly to the amount, no negative part, percents sum to 100,
+  every rule respected, cautious never riskier than growth (strictly less from 12 months), same
+  inputs → same plan; simulation outcomes ordered (bad ≤ average ≤ good) and rounded to millimes.
+- Scenario test: 1,000 TND, 12 months, "a bit" worried (medium) → Cautious 800 bond / 200 mixed,
+  Growth 500 bond / 400 mixed / 100 equity (with an emergency fund); without one, 300 TND reserve
+  first, then 560/140 vs 350/280/70.
+- Purity test now also covers `plans.py` and `simulate.py` (no DB/AI/random/float).
+
+### Test results
+- `uv run ruff check .` → all checks passed; `uv run ruff format --check .` → clean.
+- `uv run pytest` → 195 passed, 10 skipped (Postgres tests: "TEST_DATABASE_URL is not set" —
+  no Docker/Postgres in this build environment; they run in CI). Total coverage 94.8%;
+  `calculator/core` money, stats, plans, simulate all 100%.
+- Sanity run on SAMPLE data (1,000 TND, 12 months, medium, with emergency fund, 522 windows):
+  Cautious bad/average/good ≈ 1,057 / 1,067 / 1,080 TND; Growth ≈ 1,028 / 1,046 / 1,077 TND
+  (synthetic data, not real funds).
+
+### What is left
+- Day 5: MCP server exposing make_plan, simulate, fund_stats, get_nav_history (pydantic inputs,
+  repository injected). It must build the per-category history (e.g. `equal_weight_index`).
+- Long horizons (e.g. 60 months) cannot be simulated on the 3-year SAMPLE history: `simulate`
+  raises `InsufficientHistoryError`. Day 5/6 must handle this (say so to the user, or fall back).
+
+### Decisions for the owner
+1. **Plan rules** — the weight tables, 30% emergency reserve, exposure caps (15/35/65, cautious
+   half) and the 60-month national bond threshold are my first proposal (see `docs/PLAN.md`).
+   Please review; they are constants at the top of `plans.py` and easy to change.
+2. **Short horizons** — under 12 months both profiles are 100% bond SICAV, so Cautious and Growth
+   are identical. Alternative: allow a small mixed share for Growth from 6 months.
+3. **National bond tranche** — the calculator cannot know if a tranche is open, so I added a
+   `national_bond_open` flag (default false). Who sets it: the user, or a config/data value?
+4. **Equity FCP** — plans only use equity SICAV (FCPs are often less liquid). Say if FCPs should
+   share the equity part.
+5. **Long-horizon simulation** — with < 5 years of history, choose: refuse with a message (current),
+   chain shorter windows, or wait for longer real CMF data (Day 9).
+6. Earlier open items still stand: LLM provider, Langfuse v2 vs v3, branch protection on `main`,
+   statistic conventions and TND half-up rounding (Day 3).
