@@ -66,7 +66,7 @@ docker-compose.yml
 - `nav_prices(fund_id, date, nav NUMERIC(18,6), source)` UNIQUE(fund_id, date)
 - `data_flags(fund_id, date, issue, created_at)`
 
-## Calculator rules (first version, refine in code + tests)
+## Calculator rules (first version — exact rules in "Calculator plans" below)
 - No emergency fund → that part goes to bond SICAV first.
 - Horizon < 12 months → no equity.
 - National bond loan only when the horizon is long enough to lock the money.
@@ -91,6 +91,44 @@ docker-compose.yml
 - `fund_stats` needs >= 20 observations (`InsufficientDataError` otherwise).
 - Category stats = equal-weight mean of annualised return and volatility, worst max drawdown and
   worst 12-month return across the category's funds.
+
+## Calculator plans (Day 4, `calculator/core/plans.py`)
+`make_plan(amount, months, risk_tolerance, has_emergency_fund, profile, *, national_bond_open=False)`
+- Inputs: amount > 0 TND (≤ 3 decimals), months 1–600 (whole number), risk_tolerance
+  `low` (a 10% drop would worry me a lot) | `medium` (a bit) | `high` (not much),
+  profile `cautious` | `growth`, booleans for the emergency fund and an open national bond tranche.
+- No emergency fund → 30% of the amount goes to bond SICAV first, as a separate `emergency` line.
+  The profile weights apply to the remaining investable part.
+- Base weights (bond SICAV / mixed SICAV / equity SICAV, % of the investable part):
+
+  | Horizon | Cautious | Growth |
+  |---|---|---|
+  | < 12 months | 100 / 0 / 0 | 100 / 0 / 0 |
+  | 12–35 months | 80 / 20 / 0 | 50 / 40 / 10 |
+  | 36–59 months | 60 / 30 / 10 | 30 / 40 / 30 |
+  | ≥ 60 months | 50 / 30 / 20 | 20 / 30 / 50 |
+- Equity exposure = equity + ½ mixed. Cap by risk tolerance: low 15, medium 35, high 65 (% of the
+  investable part); the cautious profile gets half of that cap. Over the cap, equity moves to bond
+  SICAV first, then mixed (2 points of mixed per point of exposure).
+- National bond loan only if months ≥ 60 **and** a tranche is open: it takes half of the
+  investment bond share. The emergency reserve is never locked in it.
+- Plans use bond_sicav, national_bond, mixed_sicav, equity_sicav only (equity FCPs and individual
+  stocks are never allocated). Amounts are split with `allocate` (exact millimes).
+- Guarantees (hypothesis-tested): parts sum exactly to the amount, no negative part, percents sum
+  to 100, cautious exposure ≤ growth exposure, and for horizons ≥ 12 months the two plans differ.
+- Each plan carries plain-text `notes` explaining which rules fired (for the agents to quote).
+
+## Calculator simulation (Day 4, `calculator/core/simulate.py`)
+`simulate(plan, months, history, *, min_windows=20)`
+- `history` maps each category of the plan to one NAV series (`equal_weight_index` builds a
+  buy-and-hold, base-100 equal-weight index of a category's funds on their common dates).
+- A window ends on every observation date d (of any used series) with d ≤ the earliest series end
+  and d − `months` calendar months (month-end clamped) ≥ the latest series start. Each category is
+  valued at its last NAV on or before a day, so all lines share the same window.
+- Window value = Σ line amount × NAV(d) / NAV(base). No rebalancing, fees or taxes.
+- bad / average / good = p10 / p50 / p90 of the window values (linear interpolation), rounded to
+  millimes; `return_rate` is a fraction with 6 decimals. No randomness.
+- Fewer than `min_windows` windows (or none) → `InsufficientHistoryError` with a clear message.
 
 ## Phases
 | Day | Phase | Done when |
