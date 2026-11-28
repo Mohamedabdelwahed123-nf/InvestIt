@@ -39,7 +39,7 @@ CORE_FILES = sorted(CORE_DIR.glob("*.py"))
 
 
 def test_core_has_modules() -> None:
-    assert {"money.py", "stats.py"} <= {p.name for p in CORE_FILES}
+    assert {"money.py", "stats.py", "plans.py", "simulate.py"} <= {p.name for p in CORE_FILES}
 
 
 @pytest.mark.parametrize("path", CORE_FILES, ids=lambda p: p.name)
